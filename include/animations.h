@@ -20,7 +20,9 @@ enum class AnimationMode : uint8_t { RANDOM, FIXED, NONE };
 
 // Config: how the active animation is picked. NONE means the PLAYING screen
 // shows only the centered title/author instead of an animation.
-constexpr AnimationMode ANIMATION_MODE = AnimationMode::RANDOM;
+// FIXED while debugging animations with the buttons: RANDOM would re-roll on
+// every track change and fight the manual NEXT/PREV cycling in main.cpp.
+constexpr AnimationMode ANIMATION_MODE = AnimationMode::FIXED;
 constexpr uint8_t FIXED_ANIMATION_INDEX = 0;  // used only when ANIMATION_MODE == FIXED
 
 namespace Animations {

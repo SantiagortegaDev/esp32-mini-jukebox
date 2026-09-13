@@ -18,6 +18,11 @@ constexpr unsigned long VOLUME_REPEAT_MS = 150;
 constexpr unsigned long BOOT_FRAME_INTERVAL_MS = 100;
 constexpr size_t HISTORY_SIZE = 20;
 
+// Debug switch: while true, NEXT/PREV short-press cycles through
+// ANIMATIONS[] instead of skipping tracks. Flip back to false once the
+// animation set is finalized to restore normal track-skip behavior.
+constexpr bool ANIMATION_DEBUG_MODE = true;
+
 enum class State { BOOT, PLAYING, LIST_VIEW };
 
 Button btnPrev(PIN_PREV);
@@ -144,8 +149,17 @@ void handlePlaying() {
     }
   }
 
-  if (btnNext.shortPress()) advanceTrack();
-  if (btnPrev.shortPress()) goBackTrack();
+  if (ANIMATION_DEBUG_MODE) {
+    if (btnNext.shortPress()) {
+      Animations::setActive((Animations::active() + 1) % ANIMATION_COUNT);
+    }
+    if (btnPrev.shortPress()) {
+      Animations::setActive((Animations::active() + ANIMATION_COUNT - 1) % ANIMATION_COUNT);
+    }
+  } else {
+    if (btnNext.shortPress()) advanceTrack();
+    if (btnPrev.shortPress()) goBackTrack();
+  }
 
   unsigned long now = millis();
   if (btnNext.isHeld() && (now - lastNextRepeatMs >= VOLUME_REPEAT_MS)) {
