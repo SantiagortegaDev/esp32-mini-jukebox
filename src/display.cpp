@@ -1,5 +1,7 @@
 #include "display.h"
 
+#include "animations.h"
+
 bool Display::begin() {
   if (!_oled.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
     return false;
@@ -9,15 +11,12 @@ bool Display::begin() {
   return true;
 }
 
-void Display::drawDisc(int16_t cx, int16_t cy, uint8_t frame) {
-  const int16_t r = 14;
-  _oled.drawCircle(cx, cy, r, SSD1306_WHITE);
-  _oled.fillCircle(cx, cy, 2, SSD1306_WHITE);
-
-  float angle = (frame % 16) * (2.0f * PI / 16.0f);
-  int16_t x = cx + (int16_t)(cos(angle) * (r - 3));
-  int16_t y = cy + (int16_t)(sin(angle) * (r - 3));
-  _oled.drawLine(cx, cy, x, y, SSD1306_WHITE);
+void Display::drawCentered(const char* text, int16_t y) {
+  int16_t x1, y1;
+  uint16_t w, h;
+  _oled.getTextBounds(text, 0, y, &x1, &y1, &w, &h);
+  _oled.setCursor((128 - (int16_t)w) / 2, y);
+  _oled.print(text);
 }
 
 void Display::showBoot(uint8_t frame) {
@@ -37,27 +36,22 @@ void Display::showBoot(uint8_t frame) {
   _oled.display();
 }
 
-void Display::showPlaying(const Track& track, bool paused, uint8_t frame) {
+void Display::showPlaying(const Track& track, bool paused) {
   _oled.clearDisplay();
   _oled.setTextSize(1);
   _oled.setTextColor(SSD1306_WHITE);
 
-  if (paused) {
-    _oled.drawCircle(20, 22, 14, SSD1306_WHITE);
-    _oled.fillRect(15, 15, 3, 14, SSD1306_WHITE);
-    _oled.fillRect(22, 15, 3, 14, SSD1306_WHITE);
+  if (Animations::active() >= 0) {
+    if (Animations::isBitmap()) {
+      const uint8_t* frame = Animations::bitmapFrame();
+      if (frame) _oled.drawBitmap(0, 0, frame, 128, 64, SSD1306_WHITE);
+    } else {
+      Animations::drawProcedural(_oled);
+    }
   } else {
-    drawDisc(20, 22, frame);
-  }
-
-  _oled.setCursor(42, 14);
-  _oled.print(track.title);
-  _oled.setCursor(42, 26);
-  _oled.print(track.author);
-
-  if (paused) {
-    _oled.setCursor(0, 54);
-    _oled.print("PAUSED");
+    drawCentered(track.title, 22);
+    drawCentered(track.author, 34);
+    if (paused) drawCentered("PAUSED", 48);
   }
 
   _oled.display();

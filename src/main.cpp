@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 
+#include "animations.h"
 #include "buttons.h"
 #include "display.h"
 #include "player.h"
@@ -37,7 +38,6 @@ size_t historyLen = 0;
 size_t historyPos = 0;
 
 uint8_t bootFrame = 0;
-uint8_t animFrame = 0;
 unsigned long lastRedrawMs = 0;
 unsigned long lastBootFrameMs = 0;
 unsigned long lastNextRepeatMs = 0;
@@ -72,6 +72,7 @@ void playTrack(size_t index) {
   currentTrack = index;
   paused = false;
   player.play(TRACKS[index].fileIndex);
+  Animations::onTrackStart();
 }
 
 void advanceTrack() {
@@ -160,10 +161,13 @@ void handlePlaying() {
     advanceTrack();
   }
 
+  if (!paused) {
+    Animations::tick(now);
+  }
+
   if (now - lastRedrawMs >= REDRAW_INTERVAL_MS) {
     lastRedrawMs = now;
-    if (!paused) animFrame++;
-    display.showPlaying(TRACKS[currentTrack], paused, animFrame);
+    display.showPlaying(TRACKS[currentTrack], paused);
   }
 }
 
@@ -196,6 +200,7 @@ void setup() {
   if (!display.begin()) {
     Serial.println("OLED init failed");
   }
+  Animations::begin();
 
   Serial2.begin(9600, SERIAL_8N1, /*rxPin=*/16, /*txPin=*/17);
   playerReady = player.begin(Serial2);
