@@ -18,12 +18,11 @@ constexpr unsigned long VOLUME_REPEAT_MS = 150;
 constexpr unsigned long BOOT_FRAME_INTERVAL_MS = 100;
 constexpr size_t HISTORY_SIZE = 20;
 
-// Debug switch: while true, NEXT/PREV short-press cycles through
-// ANIMATIONS[] instead of skipping tracks. Flip back to false once the
-// animation set is finalized to restore normal track-skip behavior.
-constexpr bool ANIMATION_DEBUG_MODE = true;
+// How long a menu (song list or animation picker) can sit idle before it
+// auto-closes back to the PLAYING screen.
+constexpr unsigned long MENU_IDLE_TIMEOUT_MS = 6000;
 
-enum class State { BOOT, PLAYING, LIST_VIEW };
+enum class State { BOOT, PLAYING, LIST_VIEW, ANIM_VIEW };
 
 Button btnPrev(PIN_PREV);
 Button btnSelect(PIN_SELECT);
@@ -47,6 +46,12 @@ unsigned long lastRedrawMs = 0;
 unsigned long lastBootFrameMs = 0;
 unsigned long lastNextRepeatMs = 0;
 unsigned long lastPrevRepeatMs = 0;
+unsigned long lastMenuActivityMs = 0;
+
+bool anyButtonEvent() {
+  return btnPrev.shortPress() || btnPrev.longPressEdge() || btnSelect.shortPress() ||
+         btnSelect.longPressEdge() || btnNext.shortPress() || btnNext.longPressEdge();
+}
 
 void historyPush(size_t trackIndex) {
   if (historyLen < HISTORY_SIZE) {
@@ -109,6 +114,12 @@ void goBackTrack() {
 void enterListView() {
   listCursor = currentTrack;
   state = State::LIST_VIEW;
+  lastMenuActivityMs = millis();
+}
+
+void enterAnimView() {
+  state = State::ANIM_VIEW;
+  lastMenuActivityMs = millis();
 }
 
 void confirmListSelection() {
@@ -149,17 +160,8 @@ void handlePlaying() {
     }
   }
 
-  if (ANIMATION_DEBUG_MODE) {
-    if (btnNext.shortPress()) {
-      Animations::setActive((Animations::active() + 1) % ANIMATION_COUNT);
-    }
-    if (btnPrev.shortPress()) {
-      Animations::setActive((Animations::active() + ANIMATION_COUNT - 1) % ANIMATION_COUNT);
-    }
-  } else {
-    if (btnNext.shortPress()) advanceTrack();
-    if (btnPrev.shortPress()) goBackTrack();
-  }
+  if (btnNext.shortPress()) advanceTrack();
+  if (btnPrev.shortPress()) goBackTrack();
 
   unsigned long now = millis();
   if (btnNext.isHeld() && (now - lastNextRepeatMs >= VOLUME_REPEAT_MS)) {
@@ -186,6 +188,10 @@ void handlePlaying() {
 }
 
 void handleListView() {
+  if (btnSelect.longPressEdge()) {
+    enterAnimView();
+    return;
+  }
   if (btnNext.shortPress()) {
     listCursor = (listCursor + 1) % TRACK_COUNT;
   }
@@ -198,6 +204,26 @@ void handleListView() {
   }
 
   display.showList(TRACKS, TRACK_COUNT, listCursor);
+}
+
+void handleAnimView() {
+  if (btnSelect.longPressEdge()) {
+    enterListView();
+    return;
+  }
+  if (btnSelect.shortPress()) {
+    state = State::PLAYING;
+    return;
+  }
+  if (btnNext.shortPress()) {
+    Animations::setActive((Animations::active() + 1) % ANIMATION_COUNT);
+  }
+  if (btnPrev.shortPress()) {
+    Animations::setActive((Animations::active() + ANIMATION_COUNT - 1) % ANIMATION_COUNT);
+  }
+
+  Animations::tick(millis());
+  display.showAnimSelect((uint8_t)Animations::active(), ANIMATION_COUNT);
 }
 
 }  // namespace
@@ -231,6 +257,14 @@ void loop() {
 
   if (!playerReady) return;
 
+  if (state == State::LIST_VIEW || state == State::ANIM_VIEW) {
+    if (anyButtonEvent()) {
+      lastMenuActivityMs = millis();
+    } else if (millis() - lastMenuActivityMs >= MENU_IDLE_TIMEOUT_MS) {
+      state = State::PLAYING;
+    }
+  }
+
   switch (state) {
     case State::BOOT:
       handleBoot();
@@ -240,6 +274,9 @@ void loop() {
       break;
     case State::LIST_VIEW:
       handleListView();
+      break;
+    case State::ANIM_VIEW:
+      handleAnimView();
       break;
   }
 }

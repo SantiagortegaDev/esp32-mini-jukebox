@@ -14,11 +14,13 @@ class Display {
 
   void showBoot(uint8_t frame);
   void showPlaying(const Track& track, bool paused);
+  void showAnimSelect(uint8_t index, uint8_t count);
   void showList(const Track tracks[], size_t count, size_t cursorIndex);
   void showError(const char* message);
 
  private:
   void drawCentered(const char* text, int16_t y);
+  void drawActiveAnimation();
 
   Adafruit_SSD1306 _oled{128, 64, &Wire, -1};
 };

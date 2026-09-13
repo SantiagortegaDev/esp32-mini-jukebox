@@ -36,23 +36,44 @@ void Display::showBoot(uint8_t frame) {
   _oled.display();
 }
 
+void Display::drawActiveAnimation() {
+  if (Animations::active() < 0) return;
+  if (Animations::isBitmap()) {
+    const uint8_t* frame = Animations::bitmapFrame();
+    if (frame) _oled.drawBitmap(0, 0, frame, 128, 64, SSD1306_WHITE);
+  } else {
+    Animations::drawProcedural(_oled);
+  }
+}
+
 void Display::showPlaying(const Track& track, bool paused) {
   _oled.clearDisplay();
   _oled.setTextSize(1);
   _oled.setTextColor(SSD1306_WHITE);
 
   if (Animations::active() >= 0) {
-    if (Animations::isBitmap()) {
-      const uint8_t* frame = Animations::bitmapFrame();
-      if (frame) _oled.drawBitmap(0, 0, frame, 128, 64, SSD1306_WHITE);
-    } else {
-      Animations::drawProcedural(_oled);
-    }
+    drawActiveAnimation();
   } else {
     drawCentered(track.title, 22);
     drawCentered(track.author, 34);
     if (paused) drawCentered("PAUSED", 48);
   }
+
+  _oled.display();
+}
+
+void Display::showAnimSelect(uint8_t index, uint8_t count) {
+  _oled.clearDisplay();
+  _oled.setTextSize(1);
+  _oled.setTextColor(SSD1306_WHITE);
+
+  drawActiveAnimation();
+
+  char label[16];
+  snprintf(label, sizeof(label), "%u/%u", (unsigned)(index + 1), (unsigned)count);
+  _oled.fillRect(0, 56, 40, 8, SSD1306_BLACK);
+  _oled.setCursor(2, 57);
+  _oled.print(label);
 
   _oled.display();
 }
