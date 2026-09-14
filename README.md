@@ -9,6 +9,13 @@ entirely with three buttons.
   <img src="docs/images/photo.jpg" alt="The assembled jukebox" width="360">
 </p>
 
+## Story
+
+I had already built an mp3 player with a DFPlayer Mini, and thought: why not
+turn it into a Minecraft jukebox? So I wired up the whole circuit and got the
+project set up in PlatformIO, and started thinking about drawing Minecraft
+animations on the OLED screen. More updates soon as it comes together.
+
 ## What this is
 
 It boots on its own: power it on, a loading bar fills up on screen, and it's
@@ -131,6 +138,13 @@ src/
   main.cpp            state machine and button logic
   animations.cpp / display.cpp / buttons.cpp / player.cpp
 ```
+
+## What's mine and what's AI
+
+I used Claude Code to write the ESP32 firmware (the state machine, buttons,
+menus, animation system) and to wire in the animations. Everything else —
+coming up with the idea, sourcing and wiring the hardware, assembling the
+circuit, and testing it for real — I did myself.
 
 ## Credits
 
