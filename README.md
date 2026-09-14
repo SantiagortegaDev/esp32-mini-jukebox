@@ -139,4 +139,4 @@ no la incluye ni la redistribuye, es solo para uso personal. Gracias a
 Adafruit por las librerías de OLED/GFX y a DFRobot por el DFPlayer Mini.
 
 ---
-*SantiagortegaDev*
+*SantiagortegaDev* with *Claude*
