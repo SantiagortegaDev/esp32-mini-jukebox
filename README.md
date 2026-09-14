@@ -1,142 +1,142 @@
 # ESP32 Minecraft Jukebox
 
-Una jukebox de escritorio armada con un ESP32: reproduce las 54 canciones de
-*Minecraft Volume Alpha & Beta* de C418 desde una microSD, muestra el título
-y el autor (o una animación) en una pantallita OLED, y se maneja entera con
-tres botones.
+A desktop jukebox built around an ESP32: it plays all 54 tracks from C418's
+*Minecraft Volume Alpha & Beta* off a microSD card, shows the title and
+author (or an animation) on a little OLED screen, and is controlled
+entirely with three buttons.
 
 <p align="center">
-  <img src="docs/images/photo.jpg" alt="La jukebox armada" width="360">
+  <img src="docs/images/photo.jpg" alt="The assembled jukebox" width="360">
 </p>
 
-## Qué es esto
+## What this is
 
-Arranca sola: se prende, hace una barra de carga en la pantalla y ya está
-sonando. No hay que tocar nada para empezar a escuchar música — los botones
-son para saltar canciones, ver la lista completa, subir/bajar volumen y
-elegir qué animación se muestra mientras suena.
+It boots on its own: power it on, a loading bar fills up on screen, and it's
+already playing. You don't have to touch anything to start listening — the
+buttons are for skipping tracks, browsing the full song list, adjusting
+volume, and picking which animation shows while it plays.
 
 ## Hardware
 
-| Señal          | Pin ESP32     | Notas                              |
-|----------------|---------------|-------------------------------------|
-| OLED SDA       | GPIO21        | I2C por defecto                     |
-| OLED SCL       | GPIO22        | I2C por defecto                     |
-| DFPlayer RX    | GPIO17 (TX2)  | con resistencia de 1kΩ en serie     |
-| DFPlayer TX    | GPIO16 (RX2)  |                                      |
-| DFPlayer VCC   | 5V            | GND común con todo el circuito      |
-| Botón Prev     | GPIO32        | `INPUT_PULLUP`, activo en bajo      |
-| Botón Select   | GPIO25        | `INPUT_PULLUP`, activo en bajo      |
-| Botón Next     | GPIO33        | `INPUT_PULLUP`, activo en bajo      |
+| Signal         | ESP32 pin     | Notes                                |
+|----------------|---------------|----------------------------------------|
+| OLED SDA       | GPIO21        | default I2C                            |
+| OLED SCL       | GPIO22        | default I2C                            |
+| DFPlayer RX    | GPIO17 (TX2)  | with a 1kΩ series resistor             |
+| DFPlayer TX    | GPIO16 (RX2)  |                                         |
+| DFPlayer VCC   | 5V            | shared GND with the rest of the circuit|
+| Prev button    | GPIO32        | `INPUT_PULLUP`, active low             |
+| Select button  | GPIO25        | `INPUT_PULLUP`, active low             |
+| Next button    | GPIO33        | `INPUT_PULLUP`, active low             |
 
-Módulos: ESP32 DevKit, pantalla OLED SSD1306 128×64 I2C, DFPlayer Mini +
-tarjeta microSD (FAT32), 3 pulsadores.
+Modules: ESP32 DevKit, SSD1306 128×64 I2C OLED display, DFPlayer Mini +
+microSD card (FAT32), 3 push buttons.
 
-## Compilar y subir
+## Build and flash
 
-Con [PlatformIO](https://platformio.org/) instalado:
+With [PlatformIO](https://platformio.org/) installed:
 
 ```bash
-pio run                 # compila
-pio run -t upload       # sube al ESP32 (puerto autodetectado)
-pio device monitor      # log por serie, útil si algo no arranca
+pio run                 # build
+pio run -t upload       # flash the ESP32 (port auto-detected)
+pio device monitor      # serial log, handy if something doesn't boot
 ```
 
-En Linux, si no detecta el puerto USB, agregá tu usuario al grupo `dialout`
-(`sudo usermod -aG dialout $USER`) y reiniciá sesión.
+On Linux, if the USB port isn't detected, add your user to the `dialout`
+group (`sudo usermod -aG dialout $USER`) and log back in.
 
-## Los botones
+## Controls
 
-- **Reproduciendo:**
-  - `Select` corto = pausa/reanuda.
-  - `Select` mantenido = abre la lista de canciones.
-  - `Next`/`Prev` corto = siguiente/anterior canción.
-  - `Next`/`Prev` mantenido = subir/bajar volumen.
-- **Lista de canciones:**
-  - `Next`/`Prev` = navegar la lista.
-  - `Select` corto = reproducir la canción marcada.
-  - `Select` mantenido = pasa al selector de animaciones.
-- **Selector de animaciones:**
-  - `Next`/`Prev` = probar animaciones (vista previa en vivo, con contador tipo `3/11`).
-  - `Select` corto = confirmar y volver a reproducir.
-  - `Select` mantenido = volver a la lista de canciones.
-- Si te quedás sin tocar nada en cualquiera de los dos menús, a los 6
-  segundos vuelve solo a la pantalla de reproducción.
+- **While playing:**
+  - `Select` short press = pause/resume.
+  - `Select` held = opens the song list.
+  - `Next`/`Prev` short press = next/previous track.
+  - `Next`/`Prev` held = volume up/down.
+- **Song list:**
+  - `Next`/`Prev` = scroll the list.
+  - `Select` short press = play the highlighted song.
+  - `Select` held = jump to the animation picker.
+- **Animation picker:**
+  - `Next`/`Prev` = try out animations (live preview, with a `3/11`-style counter).
+  - `Select` short press = confirm and go back to playing.
+  - `Select` held = back to the song list.
+- Leave either menu untouched for 6 seconds and it closes on its own back to
+  the playing screen.
 
-## Las canciones
+## The songs
 
-Las 54 pistas son el álbum completo de C418 (Alpha + Beta), definidas en
-[`include/tracks.h`](include/tracks.h). Los mp3 no están en este repo — hay
-que ponerlos vos en la microSD (ver más abajo). Por defecto reproduce en
-modo aleatorio con historial: `Prev` siempre te devuelve a la canción
-anterior real, no a otra random.
+The 54 tracks are C418's full album (Alpha + Beta), defined in
+[`include/tracks.h`](include/tracks.h). The mp3 files themselves aren't in
+this repo — you need to put them on the microSD yourself (see below). By
+default it plays in shuffle mode with history: `Prev` always takes you back
+to the actual previous track, not another random one.
 
-## Animaciones
+## Animations
 
-Hay 11 animaciones disponibles: 2 dibujadas por código (un disco girando y
-una notita rebotando) y 9 en bitmap, generadas con
-[OLED Bitmap Generator](https://www.oledanimationmaker.com/) y guardadas en
-[`include/animation_bitmaps.h`](include/animation_bitmaps.h). Se eligen a
-mano desde el menú de animaciones, y la elección se queda fija hasta que
-cambies de canción o entres al menú de nuevo (no se resetea sola).
+There are 11 animations available: 2 drawn in code (a spinning disc and a
+bouncing note) and 9 bitmap ones, generated with the
+[OLED Bitmap Generator](https://www.oledanimationmaker.com/) and stored in
+[`include/animation_bitmaps.h`](include/animation_bitmaps.h). They're picked
+by hand from the animation menu, and the choice stays fixed until you change
+tracks or open the menu again (it doesn't reset on its own).
 
-La pantalla de arranque también usa un bitmap real (una barra de carga que
-va llenándose cuadro a cuadro y desaparece al llegar al final), en
+The boot screen also uses a real bitmap (a loading bar that fills up frame
+by frame and disappears once it's full), in
 [`include/boot_bitmap.h`](include/boot_bitmap.h).
 
-## Modo preview
+## Preview mode
 
-`PREVIEW_MODE` en `config.h` (apagado por defecto) arma una intro fija para
-mostrar el proyecto: arranca directo en *Chirp* con la animación #11, la
-siguiente canción es *Moog City 2*, y de ahí en más sigue en modo aleatorio
-normal (cada canción nueva con una animación aleatoria distinta, guardando
-también ese historial).
+`PREVIEW_MODE` in `config.h` (off by default) sets up a fixed intro for
+showing off the project: it boots straight into *Chirp* with animation #11,
+the next track is *Moog City 2*, and after that it continues in normal
+shuffle mode (every new track gets a different random animation, with that
+pairing kept in history too).
 
-## Configuración
+## Configuration
 
-Todo lo ajustable (pines, tiempos, modo aleatorio, modo animación, modo
-preview) está centralizado en [`include/config.h`](include/config.h) — no
-hace falta tocar nada más para cambiar ese comportamiento.
+Everything tunable (pins, timing, shuffle mode, animation mode, preview
+mode) is centralized in [`include/config.h`](include/config.h) — nothing
+else needs to change to adjust that behavior.
 
-## Agregar tus propias canciones
+## Adding your own songs
 
-El DFPlayer Mini espera los archivos numerados en la raíz de la microSD:
-`0001.mp3`, `0002.mp3`, `0003.mp3`, etc., sin saltos.
+The DFPlayer Mini expects the files numbered at the microSD root:
+`0001.mp3`, `0002.mp3`, `0003.mp3`, and so on, with no gaps.
 
-1. Copiá tus mp3 a la microSD renombrados en ese formato.
-2. Editá [`include/tracks.h`](include/tracks.h) para que la lista de
-   `TRACKS` coincida en orden y cantidad con lo que pusiste en la tarjeta
-   (título, autor, y el número de archivo).
-3. Recompilá y subí el firmware (`pio run -t upload`).
-4. Commiteá el cambio en `tracks.h`:
+1. Copy your mp3s to the microSD renamed in that format.
+2. Edit [`include/tracks.h`](include/tracks.h) so the `TRACKS` list matches
+   the order and count of what you put on the card (title, author, and file
+   number).
+3. Rebuild and flash the firmware (`pio run -t upload`).
+4. Commit the change to `tracks.h`:
    ```bash
    git add include/tracks.h
-   git commit -m "Actualizar tracklist"
+   git commit -m "Update tracklist"
    git push
    ```
-   (los mp3 en sí no se suben al repo, solo queda el registro de qué
-   canción es cada número).
+   (the mp3s themselves don't get pushed to the repo, just the record of
+   which song is which number).
 
-## Estructura del proyecto
+## Project structure
 
 ```
 include/
-  config.h            configuración centralizada
-  tracks.h            lista de canciones (título, autor, número de archivo)
-  animations.h        API y modos del sistema de animaciones
-  animation_bitmaps.h frames de las 9 animaciones bitmap
-  boot_bitmap.h        frames de la barra de carga del arranque
+  config.h            centralized configuration
+  tracks.h            song list (title, author, file number)
+  animations.h        animation system API and modes
+  animation_bitmaps.h frames for the 9 bitmap animations
+  boot_bitmap.h        frames for the boot loading bar
   buttons.h / player.h / display.h
 src/
-  main.cpp            máquina de estados y lógica de botones
+  main.cpp            state machine and button logic
   animations.cpp / display.cpp / buttons.cpp / player.cpp
 ```
 
-## Créditos
+## Credits
 
-La música es de **C418** (*Minecraft Volume Alpha & Beta*) — este proyecto
-no la incluye ni la redistribuye, es solo para uso personal. Gracias a
-Adafruit por las librerías de OLED/GFX y a DFRobot por el DFPlayer Mini.
+The music is by **C418** (*Minecraft Volume Alpha & Beta*) — this project
+doesn't include or redistribute it, it's for personal use only. Thanks to
+Adafruit for the OLED/GFX libraries and to DFRobot for the DFPlayer Mini.
 
 ---
 *SantiagortegaDev* with *Claude*
