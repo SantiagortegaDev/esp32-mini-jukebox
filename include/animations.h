@@ -3,6 +3,8 @@
 #include <Adafruit_SSD1306.h>
 #include <Arduino.h>
 
+#include "config.h"
+
 // An animation is either procedural (drawn each frame with GFX calls) or
 // bitmap-based (steps through a PROGMEM array of full-screen 128x64 frames).
 // Only one of drawProcedural/bitmapFrames is set per entry.
@@ -16,14 +18,7 @@ struct Animation {
 extern const Animation ANIMATIONS[];
 extern const uint8_t ANIMATION_COUNT;
 
-enum class AnimationMode : uint8_t { RANDOM, FIXED, NONE };
-
-// Config: how the active animation is picked. NONE means the PLAYING screen
-// shows only the centered title/author instead of an animation.
-// FIXED while debugging animations with the buttons: RANDOM would re-roll on
-// every track change and fight the manual NEXT/PREV cycling in main.cpp.
-constexpr AnimationMode ANIMATION_MODE = AnimationMode::FIXED;
-constexpr uint8_t FIXED_ANIMATION_INDEX = 0;  // used only when ANIMATION_MODE == FIXED
+// ANIMATION_MODE / FIXED_ANIMATION_INDEX now live in config.h.
 
 namespace Animations {
 

@@ -1,26 +1,15 @@
 #include <Arduino.h>
 #include <Wire.h>
+#include <string.h>
 
 #include "animations.h"
 #include "buttons.h"
+#include "config.h"
 #include "display.h"
 #include "player.h"
 #include "tracks.h"
 
 namespace {
-
-constexpr uint8_t PIN_PREV = 32;
-constexpr uint8_t PIN_SELECT = 25;
-constexpr uint8_t PIN_NEXT = 33;
-
-constexpr unsigned long REDRAW_INTERVAL_MS = 30;
-constexpr unsigned long VOLUME_REPEAT_MS = 150;
-constexpr unsigned long BOOT_FRAME_INTERVAL_MS = 100;
-constexpr size_t HISTORY_SIZE = 20;
-
-// How long a menu (song list or animation picker) can sit idle before it
-// auto-closes back to the PLAYING screen.
-constexpr unsigned long MENU_IDLE_TIMEOUT_MS = 6000;
 
 enum class State { BOOT, PLAYING, LIST_VIEW, ANIM_VIEW };
 
@@ -38,8 +27,14 @@ size_t currentTrack = 0;
 size_t listCursor = 0;
 
 int history[HISTORY_SIZE];
+uint8_t animHistory[HISTORY_SIZE];  // animation paired with history[i], only meaningful in PREVIEW_MODE
 size_t historyLen = 0;
 size_t historyPos = 0;
+
+// Preview mode is a scripted intro: after the forced start track (Chirp),
+// the very next track it advances to is also forced (Moog City 2) before
+// falling back to normal random picks.
+bool previewForcedNextPending = false;
 
 uint8_t bootFrame = 0;
 unsigned long lastRedrawMs = 0;
@@ -53,17 +48,32 @@ bool anyButtonEvent() {
          btnSelect.longPressEdge() || btnNext.shortPress() || btnNext.longPressEdge();
 }
 
-void historyPush(size_t trackIndex) {
+// Looks up a track by exact title match. Falls back to index 0 (with a
+// Serial warning) if PREVIEW_MODE names a title that doesn't exist in
+// tracks.h, so a typo there can't hang the firmware.
+size_t findTrackByTitle(const char* title) {
+  for (size_t i = 0; i < TRACK_COUNT; i++) {
+    if (strcmp(TRACKS[i].title, title) == 0) return i;
+  }
+  Serial.print("PREVIEW_MODE: track not found: ");
+  Serial.println(title);
+  return 0;
+}
+
+void historyPush(size_t trackIndex, uint8_t animIndex) {
   if (historyLen < HISTORY_SIZE) {
     history[historyLen] = trackIndex;
+    animHistory[historyLen] = animIndex;
     historyLen++;
     historyPos = historyLen - 1;
     return;
   }
   for (size_t i = 1; i < HISTORY_SIZE; i++) {
     history[i - 1] = history[i];
+    animHistory[i - 1] = animHistory[i];
   }
   history[HISTORY_SIZE - 1] = trackIndex;
+  animHistory[HISTORY_SIZE - 1] = animIndex;
   historyPos = HISTORY_SIZE - 1;
 }
 
@@ -78,36 +88,70 @@ size_t pickRandomTrack(size_t excluding) {
   return idx;
 }
 
+// Mirrors pickRandomTrack for animations: used only in PREVIEW_MODE so every
+// track change lands on a different animation than the one currently shown.
+uint8_t pickRandomAnimation(int8_t excluding) {
+  if (ANIMATION_COUNT <= 1) return 0;
+  uint8_t idx;
+  do {
+    idx = (uint8_t)random(ANIMATION_COUNT);
+  } while ((int8_t)idx == excluding);
+  return idx;
+}
+
 void playTrack(size_t index) {
   currentTrack = index;
   paused = false;
   player.play(TRACKS[index].fileIndex);
-  Animations::onTrackStart();
 }
 
 void advanceTrack() {
   if (!RANDOM_MODE) {
     playTrack((currentTrack + 1) % TRACK_COUNT);
+    Animations::onTrackStart();
     return;
   }
   if (historyPos + 1 < historyLen) {
     historyPos++;
     playTrack(history[historyPos]);
+    if (PREVIEW_MODE) {
+      Animations::setActive(animHistory[historyPos]);
+    } else {
+      Animations::onTrackStart();
+    }
   } else {
-    size_t next = pickRandomTrack(currentTrack);
-    historyPush(next);
+    size_t next;
+    if (PREVIEW_MODE && previewForcedNextPending) {
+      next = findTrackByTitle(PREVIEW_SECOND_TRACK_TITLE);
+      previewForcedNextPending = false;
+    } else {
+      next = pickRandomTrack(currentTrack);
+    }
+    uint8_t anim = PREVIEW_MODE ? pickRandomAnimation(Animations::active()) : 0;
+    historyPush(next, anim);
     playTrack(next);
+    if (PREVIEW_MODE) {
+      Animations::setActive(anim);
+    } else {
+      Animations::onTrackStart();
+    }
   }
 }
 
 void goBackTrack() {
   if (!RANDOM_MODE) {
     playTrack(currentTrack == 0 ? TRACK_COUNT - 1 : currentTrack - 1);
+    Animations::onTrackStart();
     return;
   }
   if (historyPos > 0) {
     historyPos--;
     playTrack(history[historyPos]);
+    if (PREVIEW_MODE) {
+      Animations::setActive(animHistory[historyPos]);
+    } else {
+      Animations::onTrackStart();
+    }
   }
 }
 
@@ -123,10 +167,16 @@ void enterAnimView() {
 }
 
 void confirmListSelection() {
+  uint8_t anim = PREVIEW_MODE ? pickRandomAnimation(Animations::active()) : 0;
   if (RANDOM_MODE) {
-    historyPush(listCursor);
+    historyPush(listCursor, anim);
   }
   playTrack(listCursor);
+  if (PREVIEW_MODE) {
+    Animations::setActive(anim);
+  } else {
+    Animations::onTrackStart();
+  }
   state = State::PLAYING;
 }
 
@@ -140,9 +190,20 @@ void handleBoot() {
 
   if (bootFrame < Display::NUM_BOOT_FRAMES) return;
 
+  if (PREVIEW_MODE) {
+    size_t start = findTrackByTitle(PREVIEW_START_TRACK_TITLE);
+    historyPush(start, PREVIEW_START_ANIMATION_INDEX);
+    playTrack(start);
+    Animations::setActive(PREVIEW_START_ANIMATION_INDEX);
+    previewForcedNextPending = true;
+    state = State::PLAYING;
+    return;
+  }
+
   size_t start = RANDOM_MODE ? pickRandomTrack(TRACK_COUNT) : 0;
-  if (RANDOM_MODE) historyPush(start);
+  if (RANDOM_MODE) historyPush(start, 0);
   playTrack(start);
+  Animations::onTrackStart();
   state = State::PLAYING;
 }
 
@@ -246,7 +307,7 @@ void setup() {
   playerReady = player.begin(Serial2);
   if (!playerReady) {
     Serial.println("DFPlayer init failed");
-    display.showError("DFPlayer no detectado");
+    display.showError("DFPlayer not detected");
   }
 }
 

@@ -1,6 +1,7 @@
 #include "display.h"
 
 #include "animations.h"
+#include "boot_bitmap.h"
 
 bool Display::begin() {
   if (!_oled.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
@@ -21,18 +22,9 @@ void Display::drawCentered(const char* text, int16_t y) {
 
 void Display::showBoot(uint8_t frame) {
   _oled.clearDisplay();
-  _oled.setTextSize(1);
-  _oled.setTextColor(SSD1306_WHITE);
-
-  _oled.setCursor(20, 16);
-  _oled.print("MINECRAFT");
-  _oled.setCursor(28, 28);
-  _oled.print("JUKEBOX");
-
-  int16_t barWidth = map(frame, 0, NUM_BOOT_FRAMES - 1, 0, 108);
-  _oled.drawRect(10, 46, 108, 8, SSD1306_WHITE);
-  _oled.fillRect(10, 46, barWidth, 8, SSD1306_WHITE);
-
+  if (frame < BOOT_FRAME_COUNT) {
+    _oled.drawBitmap(0, 0, BOOT_FRAMES[frame], 128, 64, SSD1306_WHITE);
+  }
   _oled.display();
 }
 

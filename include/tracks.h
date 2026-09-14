@@ -66,7 +66,3 @@ static const Track TRACKS[] = {
     {"Warmth", "C418", 54},
 };
 constexpr size_t TRACK_COUNT = sizeof(TRACKS) / sizeof(TRACKS[0]);
-
-// true = shuffle with back-history (PREV always replays the actual previous track)
-// false = strict sequential circular order
-constexpr bool RANDOM_MODE = true;

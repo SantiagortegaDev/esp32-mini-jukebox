@@ -8,7 +8,9 @@
 
 class Display {
  public:
-  static constexpr uint8_t NUM_BOOT_FRAMES = 20;
+  // Kept in sync with BOOT_FRAME_COUNT in boot_bitmap.h (the loading-bar
+  // bitmap has 11 frames: index 0 is empty, the last one is full).
+  static constexpr uint8_t NUM_BOOT_FRAMES = 11;
 
   bool begin();
 
