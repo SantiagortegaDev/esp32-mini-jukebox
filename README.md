@@ -9,6 +9,11 @@ entirely with three buttons.
   <img src="docs/images/photo.jpg" alt="The assembled jukebox" width="360">
 </p>
 
+> [!NOTE]
+> Sorry
+> I didn't know that the code by AI need to be less than 30%
+> i'm rewriting all the project to comply with the rules
+
 ## Story
 
 I had already built an mp3 player with a DFPlayer Mini, and thought: why not
