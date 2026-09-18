@@ -307,7 +307,7 @@ void setup() {
   playerReady = player.begin(Serial2);
   if (!playerReady) {
     Serial.println("DFPlayer init failed");
-    display.showError("DFPlayer not detected");
+    display.showError();
   }
 }
 

@@ -100,13 +100,22 @@ void Display::showList(const Track tracks[], size_t count, size_t cursorIndex) {
   _oled.display();
 }
 
-void Display::showError(const char* message) {
-  _oled.clearDisplay();
-  _oled.setTextSize(1);
-  _oled.setTextColor(SSD1306_WHITE);
-  _oled.setCursor(0, 26);
-  _oled.println("ERROR:");
-  _oled.setCursor(0, 40);
-  _oled.println(message);
-  _oled.display();
+// [BEGIN lopaka generated] (this is not ai, is a generator for oled displays)
+// better design to the error dfplayer not detected
+static const unsigned char PROGMEM image_FaceNopower_bits[] = {0x00,0x00,0x00,0x00,0x03,0x00,0x06,0x00,0x03,0x00,0x06,0x00,0x07,0x00,0x07,0x00,0x7e,0x00,0x03,0xf0,0x7c,0x00,0x01,0xf0,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x1f,0xc0,0x00,0x00,0x30,0x60,0x00,0x00,0x7f,0xf0,0x00,0x00,0x7f,0xf0,0x00,0x00,0x70,0x70,0x00,0x00,0x00,0x00,0x00};
+
+void Display::showError() {
+    _oled.clearDisplay();
+    // FaceNopower
+    _oled.drawBitmap(50, 9, image_FaceNopower_bits, 29, 14, 1);
+    // string 17
+    _oled.setTextColor(1);
+    _oled.setTextWrap(false);
+    _oled.setCursor(29, 43);
+    _oled.print("not detected");
+    // string 18
+    _oled.setCursor(41, 31);
+    _oled.print("DFPlayer");
+    _oled.display();
 }
+// [END lopaka generated]

@@ -18,7 +18,7 @@ class Display {
   void showPlaying(const Track& track, bool paused);
   void showAnimSelect(uint8_t index, uint8_t count);
   void showList(const Track tracks[], size_t count, size_t cursorIndex);
-  void showError(const char* message);
+  void showError();
 
  private:
   void drawCentered(const char* text, int16_t y);
