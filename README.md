@@ -12,7 +12,7 @@ entirely with three buttons.
 > [!NOTE]
 > Sorry
 > I didn't know that the code by AI need to be less than 30%
-> i'm rewriting all the project to comply with the rules
+> i'm rewriting parts of the project to comply with the rules
 
 ## Story
 
