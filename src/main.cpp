@@ -171,7 +171,12 @@ void confirmListSelection() {
   if (RANDOM_MODE) {
     historyPush(listCursor, anim);
   }
-  playTrack(listCursor);
+  if (listCursor == currentTrack) {
+    state = State::PLAYING;
+  } else {
+    playTrack(listCursor);
+  }
+  
   if (PREVIEW_MODE) {
     Animations::setActive(anim);
   } else {
